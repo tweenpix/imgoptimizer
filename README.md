@@ -15,3 +15,7 @@ for running need installed node.js + squoosh-cli + mogrify (ImageMagick) + svgo
 run from parrent image directory
 as
 find . -type d \( ! -name . \) -exec bash -c "cd '{}' && pwd && /home/backup/imagecompress.sh" \;
+
+
+Example
+https://imgur.com/gallery/ytHTvaK
