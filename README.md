@@ -18,4 +18,4 @@ find . -type d \( ! -name . \) -exec bash -c "cd '{}' && pwd && /home/backup/ima
 
 
 Example
-https://imgur.com/gallery/ytHTvaK
+![https://imgur.com/gallery/ytHTvaK](https://i.imgur.com/P7yF4uc.png)
