@@ -8,10 +8,10 @@ Optimize images via Squoosh
 - convert jpg,png to webp + avif
 - check for avoid double optimization
 
-#Requirements
+# Requirements
 for running need installed node.js + squoosh-cli + mogrify (ImageMagick) + svgo
 
-#Running
+# Running
 run from parrent image directory
 as
 find . -type d \( ! -name . \) -exec bash -c "cd '{}' && pwd && /home/backup/imagecompress.sh" \;
