@@ -17,5 +17,5 @@ as
 find . -type d \( ! -name . \) -exec bash -c "cd '{}' && pwd && /home/backup/imagecompress.sh" \;
 
 
-Example
-![https://imgur.com/gallery/ytHTvaK](https://i.imgur.com/P7yF4uc.png)
+## Example
+# ![https://imgur.com/gallery/ytHTvaK](https://i.imgur.com/P7yF4uc.png)
