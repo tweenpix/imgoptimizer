@@ -12,9 +12,9 @@ clear
 
 hour=$(date +%H)
 
-echo "режим работы скрипта с 0 до 6 утра"
+echo "режим работы скрипта с 22 до 6 утра"
 
-if [ "$hour" -lt 6 -a "$hour" -ge 0 ]; then
+#if [ "$hour" != 6 ]; then
 
 	#check identify, svgo, mogrify
 	if [[ $(which identify) && $(which mogrify) && $(which svgo) && $(which squoosh-cli) ]]; then
@@ -32,7 +32,12 @@ if [ "$hour" -lt 6 -a "$hour" -ge 0 ]; then
 		for current in $(find . -maxdepth 1 \( -iname '*.jpeg' -o -iname '*.jpg' -o -iname '*.png' \) -type f); do
 
 			#check current time
-			if [ "$hour" -lt 6 -a "$hour" -ge 0 ]; then
+
+if [ "$hour" == 06 ]; then
+exit 1
+fi
+
+			#if [ "$hour" != 6 ]; then
 
 				if [ ! -f $current.webp ]; then
 					echo -e "${LYELLOW}need create ${DBOLD}webp from $current"
@@ -48,7 +53,7 @@ if [ "$hour" -lt 6 -a "$hour" -ge 0 ]; then
 					squoosh-cli --avif '{"speed":2}' $current.avif
 					chown www-data:www-data $current.avif
 				fi
-			fi
+			#fi
 		done
 
 		#mozjpeg
@@ -94,8 +99,12 @@ if [ "$hour" -lt 6 -a "$hour" -ge 0 ]; then
 		echo "need install ImageMagick, SVGO (node js packet), Squoosh-cli (node js packet)"
 	fi
 
+#fi
+
+if [ "$hour" == 06 ]; then
+	exit 1
 fi
 
 tput sgr0
 echo ""
-exit
+exit 1
