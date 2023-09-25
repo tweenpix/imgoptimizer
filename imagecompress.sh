@@ -106,14 +106,14 @@ for image_file in *.jpeg *.jpg *.png; do
 
                 if [ ! -f "${image_file}.webp" ]; then
                     echo -e "${LYELLOW}need create ${DBOLD}webp from $image_file"
-                    tput sgr0
+                    # tput sgr0
                     cp -- "$image_file" "${image_file}.webp"
                     squoosh-cli --webp '{"quality":85, "method":4,"sns_strength":50,"filter_strength":60,"filter_type":1,"segments":4,"pass":1,"show_compressed":0,"preprocessing":0, "autofilter":0, "partition_limit":0, "alpha_compression":1, "alpha_filtering":1, "alpha_quality":100,"lossless":0}' "${image_file}.webp"
                     chown www-data:www-data "${image_file}.webp"
                 fi
                 if [ ! -f "${image_file}.avif" ]; then
                     echo -e "${LYELLOW}need create ${DBOLD}avif from $image_file"
-                    tput sgr0
+                    # tput sgr0
                     cp -- "$image_file" "${image_file}.avif"
                     squoosh-cli --avif '{"speed":2}' "${image_file}.avif"
                     chown www-data:www-data "${image_file}.avif"
@@ -166,7 +166,7 @@ for image_file in *.jpeg *.jpg *.png; do
 
             if [ -f "${image_file}.webp" ] && [ "$(du -b -- "${image_file}.webp" | cut -f 1)" -gt "$(du -b -- "$image_file" | cut -f 1)" ]; then
                 echo -e "webp is ${LYELLOW}bigger ${DBOLD}than $image_file, need delete webp"
-                tput sgr0
+                #tput sgr0
                 rm -- "${image_file}.webp"
             fi
         fi
@@ -175,7 +175,7 @@ for image_file in *.jpeg *.jpg *.png; do
         else
             if [ -f "${image_file}.avif" ] && [ "$(du -b -- "${image_file}.avif" | cut -f 1)" -gt "$(du -b -- "$image_file" | cut -f 1)" ]; then
                 echo -e "avif is ${LYELLOW}bigger ${DBOLD}than $image_file, need delete avif"
-                tput sgr0
+                #tput sgr0
                 rm -- "${image_file}.avif"
             fi
         fi
@@ -196,6 +196,6 @@ done
 # Логирование результатов
 echo "Оптимизация изображений завершена в $(date)" >>"$log_file"
 
-tput sgr0
+#tput sgr0
 echo ""
 exit 0
