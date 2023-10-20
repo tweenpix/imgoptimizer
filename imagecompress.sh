@@ -1,5 +1,5 @@
 #!/bin/bash
-
+export NODE_OPTIONS='--no-experimental-fetch'
 # APEXWEB.RU
 # command line for start
 # run from parent image directory
