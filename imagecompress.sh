@@ -85,14 +85,17 @@ done
 for svg_file in *.svg; do
     if [[ -f "$svg_file" && ! -f "$svg_file.optimised" ]]; then
 
-            if [[ "$svg_file" =~ [^a-zA-Z0-9_.\-[:alnum:]_[:punct:]] ]]; then
-                echo "89 Skipping $svg_file due to invalid characters in filename" >>"$log_file"
-            else
-                echo "Optimizing $svg_file" >>"$log_file"
-                svgo "$svg_file"
+        if [[ "$svg_file" =~ [^a-zA-Z0-9_.\-[:alnum:]_[:punct:]] ]]; then
+            echo "89 Skipping $svg_file due to invalid characters in filename" >>"$log_file"
+        else
+            echo "Optimizing $svg_file" >>"$log_file"
+            if svgo "$svg_file"; then
                 chown www-data:www-data "$svg_file"
                 touch "$svg_file.optimised"
+            else
+                echo "Error occurred while optimizing $svg_file" >>"$log_file"
             fi
+        fi
 
     fi
 done
