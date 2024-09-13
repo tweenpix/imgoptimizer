@@ -29,10 +29,11 @@ git clone https://github.com/tweenpix/imgoptimizer.git
 chmod +x /path/to/imgoptimize.js
 ln -s /path/to/imgoptimize.js /usr/local/bin/imgoptimize
 
-## 4. Change user owner of file in imgoptimize.js
+## 4. Change file user owner and path to log file in imgoptimize.js
 ``
-const iUser = 'webuser';
-const iGroup = 'webuser';
+const logFile = "/var/log/optimization.log";\n
+const iUser = 'webuser';\n
+const iGroup = 'webuser';\n
 ``
 
 # Running
