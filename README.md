@@ -5,37 +5,43 @@ Optimize images via Squoosh
 - optimize png
 - optimize svg
 - convert bmp to jpg
-- convert jpg,png to webp + avif
+- convert jpg, png to webp + avif
 - check for avoid double optimization
 
 # Requirements
-for running need installed node.js + squoosh-cli + mogrify (ImageMagick) + svgo
-
+for running need installed node.js + sharp (https://www.npmjs.com/package/sharp)
 
 # Installation
-First of first, need install NODE.JS 16x    
+First of first, need install NODE.JS
 
 ## 1. Node.js for Ubuntu    
-curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -    
+sudo curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -    
 sudo apt-get install -y nodejs    
 
 ## 1. Node.js for Debian, as root    
-curl -fsSL https://deb.nodesource.com/setup_16.x | bash -    
-apt-get install -y nodejs    
+sudo curl -fsSL https://deb.nodesource.com/setup_20.x | bash -    
+sudo apt-get install -y nodejs    
 
-## 2. Install squoosh/cli    
-npm i -g @squoosh/cli    
+## 2. download imgoptimize.js
+git clone https://github.com/tweenpix/imgoptimizer.git
 
 ## 3. Make link to USR/LOCAL/BIN
-chmod +x /path/to/imagecompress.sh    
-ln -s /path/to/imagecompress.sh /usr/local/bin/imagecompress
+chmod +x /path/to/imgoptimize.js
+ln -s /path/to/imgoptimize.js /usr/local/bin/imgoptimize
 
-
+## 4. Change user owner of file in imgoptimize.js
+``
+const iUser = 'webuser';
+const iGroup = 'webuser';
+``
 
 # Running
 run from parrent image directory for recursivly optimization    
 as    
-find . -type d \( ! -name . \) -exec bash -c "cd '{}' && imagecompress" \;
+find . -type d \( ! -name . \) -exec bash -c "cd '{}' && imgoptimize" \;
+
+# Clean result
+just run: imgoptimize clean
 
 
 ## Example
