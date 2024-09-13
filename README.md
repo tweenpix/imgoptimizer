@@ -31,9 +31,13 @@ ln -s /path/to/imgoptimize.js /usr/local/bin/imgoptimize
 
 ## 4. Change file user owner and path to log file in imgoptimize.js
 ``
-const logFile = "/var/log/optimization.log";\n
-const iUser = 'webuser';\n
-const iGroup = 'webuser';\n
+const logFile = "/var/log/optimization.log";
+``
+``
+const iUser = 'webuser';
+``
+``
+const iGroup = 'webuser';
 ``
 
 # Running
