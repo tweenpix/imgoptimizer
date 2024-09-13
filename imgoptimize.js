@@ -50,7 +50,7 @@ if ((currentHour >= 6 && currentHour < 9) || (currentHour >= 22 && currentHour <
 }
 
 // Check for valid filenames
-const isValidFilename = (filename) => /^[a-zA-Z0-9_.\-]+$/.test(filename);
+const isValidFilename = (filename) => /^[^\0\/]+$/.test(filename);
 
 // Optimize images using sharp
 async function optimizeImage(file, format) {
