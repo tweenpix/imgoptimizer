@@ -26,7 +26,7 @@ sudo apt-get install -y nodejs
 git clone https://github.com/tweenpix/imgoptimizer.git
 
 ## 3. Make link to USR/LOCAL/BIN
-chmod +x /path/to/imgoptimize.js
+chmod +x /path/to/imgoptimize.js &&
 ln -s /path/to/imgoptimize.js /usr/local/bin/imgoptimize
 
 ## 4. Change file user owner and path to log file in imgoptimize.js
@@ -42,8 +42,9 @@ const iGroup = 'webuser';
 
 # Running
 run from parrent image directory for recursivly optimization    
-as    
-find . -type d \( ! -name . \) -exec bash -c "cd '{}' && imgoptimize" \;
+as    \
+find . -type d \( ! -name . \) -exec bash -c 'cd "$1" && imgoptimize' _ {} \;
+
 
 # Clean result
 just run: imgoptimize clean
