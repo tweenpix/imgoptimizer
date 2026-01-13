@@ -1,141 +1,267 @@
 #!/usr/bin/env node
-
-const fs = require('fs');
+const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 
-// Promisify exec for asynchronous execution
 const execAsync = promisify(exec);
 
-const logFile = "/var/log/optimization.log";
-const currentHour = new Date().getHours();
+// Константы конфигурации
+const CONFIG = {
+  logFile: '/var/log/optimization.log',
+  user: 'webuser',
+  group: 'webuser',
+  imageQuality: 85,
+  skipHours: [
+    { start: 6, end: 9 },
+    { start: 22, end: 23 }
+  ],
+  supportedExtensions: ['.jpg', '.jpeg', '.png', '.bmp', '.svg'],
+  optimizationFormats: ['webp', 'avif']
+};
 
-const iUser = 'webuser';
-const iGroup = 'webuser';
+// Класс для логирования
+class Logger {
+  constructor(logFile) {
+    this.logFile = logFile;
+  }
 
-// Helper function for logging
-function log(message) {
-  fs.appendFileSync(logFile, `${message}\n`, 'utf8');
-  console.log(`${message}`);
+  log(message) {
+    const logMessage = `[${new Date().toISOString()}] ${message}\n`;
+    fsSync.appendFileSync(this.logFile, logMessage, 'utf8');
+    console.log(message);
+  }
+
+  error(message, error) {
+    this.log(`ERROR: ${message} - ${error?.message || error}`);
+  }
 }
 
-// Function to clean up optimized files
-async function cleanupOptimizedFiles() {
-  log("Cleaning up optimized files");
-  let count = 0;
-  const files = fs.readdirSync('.');
-  for (const file of files) {
-    if (file.endsWith('.optimised')) {
-      fs.unlinkSync(file);
-      count++;
+// Класс для работы с файлами
+class FileManager {
+  static isValidFilename(filename) {
+    return /^[^\0\/]+$/.test(filename);
+  }
+
+  static async changeOwnership(file, user, group) {
+    try {
+      await execAsync(`chown ${user}:${group} "${file}"`);
+      return true;
+    } catch (error) {
+      throw new Error(`Failed to change ownership: ${error.message}`);
     }
   }
-  log(`Removed ${count} optimized files`);
-}
 
-// Handle parameters
-if (process.argv.includes('clean')) {
-  cleanupOptimizedFiles();
-  process.exit(0);
-}
-
-log(`Script started at ${new Date().toLocaleString()}`);
-
-// Skip execution for certain hours
-if ((currentHour >= 6 && currentHour < 9) || (currentHour >= 22 && currentHour < 23)) {
-  log("Skipping script execution due to non-optimal hours");
-  process.exit(0);
-}
-
-// Check for valid filenames
-const isValidFilename = (filename) => /^[^\0\/]+$/.test(filename);
-
-// Optimize images using sharp
-async function optimizeImage(file, format) {
-  const outputFile = `${file}.${format}`;
-  if (fs.existsSync(outputFile)) {
-    log(`${format.toUpperCase()} already exists for ${file}`);
-    return;
+  static async getFiles(directory = '.') {
+    try {
+      return await fs.readdir(directory);
+    } catch (error) {
+      throw new Error(`Failed to read directory: ${error.message}`);
+    }
   }
 
-  try {
-    await sharp(file)
-      .toFormat(format, { quality: 85 })
-      .toFile(outputFile);
+  static async fileExists(filePath) {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
-    log(`Optimized ${file} to ${format}`);
-
-    // Change ownership asynchronously
-    await execAsync(`chown ${iUser}:${iGroup} ${outputFile}`);
-    log(`Changed ownership of ${outputFile} to ${iUser}:${iGroup}`);
-  } catch (error) {
-    log(`Error optimizing ${file} to ${format}: ${error}`);
+  static async createMarkerFile(file, user, group) {
+    const markerFile = `${file}.optimised`;
+    await fs.writeFile(markerFile, '');
+    await this.changeOwnership(markerFile, user, group);
   }
 }
 
-// Main function to process images
-async function processImages() {
-  const files = fs.readdirSync('.');
+// Класс для оптимизации изображений
+class ImageOptimizer {
+  constructor(logger, config) {
+    this.logger = logger;
+    this.config = config;
+  }
 
-  for (const file of files) {
+  async optimizeToFormat(file, format) {
+    const outputFile = `${file}.${format}`;
+
+    if (await FileManager.fileExists(outputFile)) {
+      this.logger.log(`${format.toUpperCase()} уже существует для ${file}`);
+      return;
+    }
+
+    try {
+      await sharp(file)
+        .toFormat(format, { quality: this.config.imageQuality })
+        .toFile(outputFile);
+
+      this.logger.log(`Оптимизирован ${file} в ${format}`);
+      await FileManager.changeOwnership(outputFile, this.config.user, this.config.group);
+      this.logger.log(`Изменены права для ${outputFile}`);
+    } catch (error) {
+      this.logger.error(`Ошибка оптимизации ${file} в ${format}`, error);
+    }
+  }
+
+  async convertBmpToJpg(file) {
+    const jpgFile = file.replace('.bmp', '.jpg');
+    
+    try {
+      await sharp(file)
+        .toFormat('jpg')
+        .toFile(jpgFile);
+      
+      this.logger.log(`Конвертирован ${file} в JPG`);
+      await FileManager.changeOwnership(jpgFile, this.config.user, this.config.group);
+    } catch (error) {
+      this.logger.error(`Ошибка конвертации BMP в JPG`, error);
+    }
+  }
+
+  async optimizeSvg(file) {
+    try {
+      this.logger.log(`Оптимизация SVG: ${file}`);
+      await execAsync(`svgo "${file}"`);
+      await FileManager.changeOwnership(file, this.config.user, this.config.group);
+    } catch (error) {
+      this.logger.error(`Ошибка оптимизации SVG`, error);
+    }
+  }
+
+  async processFile(file) {
     const ext = path.extname(file).toLowerCase();
-    if (['.jpg', '.jpeg', '.png', '.bmp', '.svg'].includes(ext) && !file.endsWith('.optimised')) {
-      if (!isValidFilename(file)) {
-        log(`Skipping ${file} due to invalid characters in filename`);
-        continue;
-      }
 
-      log(`Processing ${file}`);
+    if (!this.config.supportedExtensions.includes(ext) || file.endsWith('.optimised')) {
+      return;
+    }
 
-      // Handle BMP files separately
-      if (ext === '.bmp') {
-        const jpgFile = file.replace('.bmp', '.jpg');
-        try {
-          await sharp(file)
-            .toFormat('jpg')
-            .toFile(jpgFile);
-          
-          log(`Converted ${file} to JPG`);
-          await execAsync(`chown ${iUser}:${iGroup} ${jpgFile}`);
-        } catch (err) {
-          log(`Error converting BMP to JPG: ${err}`);
-        }
-        continue;
-      }
+    if (!FileManager.isValidFilename(file)) {
+      this.logger.log(`Пропуск ${file} из-за недопустимых символов в имени`);
+      return;
+    }
 
-      // Optimize SVG files
-      if (ext === '.svg') {
-        try {
-          log(`Optimizing SVG: ${file}`);
-          await execAsync(`svgo ${file}`);
-          await execAsync(`chown ${iUser}:${iGroup} ${file}`);
-        } catch (err) {
-          log(`Error optimizing SVG: ${err}`);
-        }
-        continue;
-      }
+    this.logger.log(`Обработка ${file}`);
 
-      // Optimize JPEG, PNG to WebP and AVIF
-      if (ext === '.jpeg' || ext === '.jpg' || ext === '.png') {
-        await optimizeImage(file, 'webp');
-        await optimizeImage(file, 'avif');
-      }
+    // BMP конвертация
+    if (ext === '.bmp') {
+      await this.convertBmpToJpg(file);
+      return;
+    }
 
-      // Mark file as optimized
-      try {
-        fs.writeFileSync(`${file}.optimised`, '');
-        await execAsync(`chown ${iUser}:${iGroup} ${file}.optimised`);
-      } catch (err) {
-        log(`Error marking ${file} as optimized: ${err}`);
+    // SVG оптимизация
+    if (ext === '.svg') {
+      await this.optimizeSvg(file);
+      return;
+    }
+
+    // JPEG/PNG оптимизация
+    if (['.jpeg', '.jpg', '.png'].includes(ext)) {
+      for (const format of this.config.optimizationFormats) {
+        await this.optimizeToFormat(file, format);
       }
+    }
+
+    // Создание маркера оптимизации
+    try {
+      await FileManager.createMarkerFile(file, this.config.user, this.config.group);
+    } catch (error) {
+      this.logger.error(`Ошибка создания маркера для ${file}`, error);
     }
   }
 }
 
-// Perform image optimization
+// Класс для очистки файлов
+class FileCleaner {
+  constructor(logger) {
+    this.logger = logger;
+  }
+
+  async cleanupOptimizedFiles() {
+    this.logger.log('Очистка оптимизированных файлов');
+    let count = 0;
+
+    try {
+      const files = await FileManager.getFiles();
+      
+      for (const file of files) {
+        if (file.endsWith('.optimised')) {
+          await fs.unlink(file);
+          count++;
+        }
+      }
+
+      this.logger.log(`Удалено ${count} оптимизированных файлов`);
+    } catch (error) {
+      this.logger.error('Ошибка при очистке файлов', error);
+    }
+  }
+}
+
+// Класс для управления расписанием
+class ScheduleManager {
+  static shouldSkipExecution(skipHours) {
+    const currentHour = new Date().getHours();
+    
+    return skipHours.some(({ start, end }) => 
+      currentHour >= start && currentHour < end
+    );
+  }
+}
+
+// Главная функция приложения
+class Application {
+  constructor(config) {
+    this.config = config;
+    this.logger = new Logger(config.logFile);
+    this.optimizer = new ImageOptimizer(this.logger, config);
+    this.cleaner = new FileCleaner(this.logger);
+  }
+
+  async run(args) {
+    // Обработка команды очистки
+    if (args.includes('clean')) {
+      await this.cleaner.cleanupOptimizedFiles();
+      return;
+    }
+
+    this.logger.log('Запуск скрипта');
+
+    // Проверка расписания
+    if (ScheduleManager.shouldSkipExecution(this.config.skipHours)) {
+      this.logger.log('Пропуск выполнения из-за неоптимального времени');
+      return;
+    }
+
+    // Обработка изображений
+    await this.processImages();
+    this.logger.log('Оптимизация завершена');
+  }
+
+  async processImages() {
+    try {
+      const files = await FileManager.getFiles();
+      
+      for (const file of files) {
+        await this.optimizer.processFile(file);
+      }
+    } catch (error) {
+      this.logger.error('Ошибка обработки изображений', error);
+      throw error;
+    }
+  }
+}
+
+// Точка входа
 (async () => {
-  await processImages();
-  log(`Optimization completed at ${new Date().toLocaleString()}`);
+  try {
+    const app = new Application(CONFIG);
+    await app.run(process.argv.slice(2));
+    process.exit(0);
+  } catch (error) {
+    console.error('Критическая ошибка:', error);
+    process.exit(1);
+  }
 })();
